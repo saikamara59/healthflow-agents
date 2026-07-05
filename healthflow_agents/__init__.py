@@ -4,10 +4,20 @@ Agents are constructed with injected logging interfaces (see
 healthflow_agents.core.logging); with no arguments they run standalone
 with stdout defaults.
 """
-from healthflow_agents.agents.comparison_agent import ComparisonAgent
+from healthflow_agents.agents import (
+    AppealAgent,
+    ComparisonAgent,
+    CostCalculatorAgent,
+    NetworkAgent,
+    TranslationAgent,
+)
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "AppealAgent",
     "ComparisonAgent",
+    "CostCalculatorAgent",
+    "NetworkAgent",
+    "TranslationAgent",
 ]

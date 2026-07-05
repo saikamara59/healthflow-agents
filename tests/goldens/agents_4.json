@@ -1,0 +1,100 @@
+{
+  "cost": {
+    "system_prompt": "You are a health insurance cost comparison assistant. Compare plans based on estimated annual out-of-pocket costs. Focus on total cost (premium + care costs), not just premium. Highlight which plan saves the most money for the user's specific usage pattern. Break down where the savings come from. Never give medical advice.",
+    "user_prompt": "Compare these Medicare Advantage plans by estimated annual out-of-pocket cost.\n\nUser's expected usage: 12 doctor visits/year\nPrescriptions: Metformin (12x/year)\n\n## Plans (ranked by total cost, cheapest first)\n\n### #1: Cheap Plan (H0001-002)\n- Annual Premium: $0.00\n- Annual Care Cost: $300.00\n- **Total Annual Cost: $300.00**\n- Doctor Visits: $240.00\n- Prescriptions: $60.00\n- Procedures: $0.00\n  - Metformin: $5.00/fill x 12 = $60.00/year\n\n### #2: Expensive Plan (H0001-001)\n- Annual Premium: $1200.00\n- Annual Care Cost: $600.00\n- **Total Annual Cost: $1800.00**\n- Doctor Visits: $480.00\n- Prescriptions: $120.00\n- Procedures: $0.00\n  - Metformin: $10.00/fill x 12 = $120.00/year\n\nRecommend the best plan for this user's usage. Focus on total annual cost and where the savings come from. Do NOT give medical advice.",
+    "results": [
+      {
+        "plan_name": "Cheap Plan",
+        "plan_id": "H0001-002",
+        "annual_premium": 0.0,
+        "annual_care_cost": 300.0,
+        "total_annual_cost": 300.0,
+        "breakdown": {
+          "premium_total": 0.0,
+          "deductible_spent": 0.0,
+          "doctor_visit_costs": 240.0,
+          "prescription_costs": 60.0,
+          "procedure_costs": 0.0,
+          "total_before_oop_cap": 300.0,
+          "oop_cap_applied": false,
+          "final_care_cost": 300.0
+        },
+        "prescription_details": [
+          {
+            "name": "Metformin",
+            "cost_per_fill": 5.0,
+            "annual_cost": 60.0
+          }
+        ],
+        "procedure_details": []
+      },
+      {
+        "plan_name": "Expensive Plan",
+        "plan_id": "H0001-001",
+        "annual_premium": 1200.0,
+        "annual_care_cost": 600.0,
+        "total_annual_cost": 1800.0,
+        "breakdown": {
+          "premium_total": 1200.0,
+          "deductible_spent": 500.0,
+          "doctor_visit_costs": 480.0,
+          "prescription_costs": 120.0,
+          "procedure_costs": 0.0,
+          "total_before_oop_cap": 600.0,
+          "oop_cap_applied": false,
+          "final_care_cost": 600.0
+        },
+        "prescription_details": [
+          {
+            "name": "Metformin",
+            "cost_per_fill": 10.0,
+            "annual_cost": 120.0
+          }
+        ],
+        "procedure_details": []
+      }
+    ]
+  },
+  "network": {
+    "system_prompt": "You are a health insurance network verification assistant. Summarize which plans have the best network coverage for the user's doctors and prescriptions. Highlight any providers that are out-of-network or drugs not on formulary. Never give medical advice.",
+    "user_prompt": "Network verification results:\n\nPlan: Plan B (H3312-034)\n  Providers in-network: 1/1\n    - Dr. Sarah Chen: IN-NETWORK (NPI verified: True)\n  Drugs on formulary: 1/1\n    - Metformin: ON FORMULARY (Tier 1 - Generic, $5.0/mo)\n\nPlan: Plan A (FAKE-PLAN-999)\n  Providers in-network: 0/1\n    - Dr. Sarah Chen: OUT-OF-NETWORK (NPI verified: True)\n  Drugs on formulary: 0/1\n    - Lipitor: NOT ON FORMULARY\n      Warning: Drug not on formulary.\n\nBased on these results, which plan(s) offer the best network coverage? Summarize key findings concisely."
+  },
+  "translation": {
+    "system_prompt": "You are an insurance document translator. Your job is to read health insurance plan documents and answer questions about coverage in plain, clear English. Translate insurance jargon into simple language. Answer only the specific question asked. If the document doesn't contain enough information to answer, say so. Never give medical advice, recommend treatments, or diagnose conditions.",
+    "user_prompt": "Below are relevant sections from a health insurance Summary of Benefits document.\n\n## EMERGENCY CARE\nEmergency room: $90 copay (waived if admitted)\nAmbulance: $250 copay\n\n## INPATIENT HOSPITAL CARE\nYou pay $250 copay per day for days 1-5.\nPrior authorization required.\n\n---\n\nQuestion: What is the ER copay?\n\nAnswer this question in plain English based on the document sections above. Be specific about dollar amounts, copays, and conditions. If the information is not in the document, say so clearly.",
+    "user_prompt_redacted_fixture": "Below are relevant sections from a health insurance Summary of Benefits document.\n\n## Eligibility\nPatient: [PATIENT_NAME] is eligible.\n\n---\n\nQuestion: Dear [PATIENT_NAME], what is the copay?\n\nAnswer this question in plain English based on the document sections above. Be specific about dollar amounts, copays, and conditions. If the information is not in the document, say so clearly.",
+    "redaction_summary": {
+      "count": 2,
+      "types": [
+        "[PATIENT_NAME]"
+      ]
+    }
+  },
+  "appeal": {
+    "system_prompt": "You are a health insurance claims appeal assistant. Review denial details and suggest additional appeal arguments. Focus on coverage rules, documentation gaps, and procedural rights. Never give medical advice. Never guarantee appeal outcomes. All patient information has been redacted \u2014 do not ask for or reference real patient details.",
+    "user_prompt": "Denial letter (PHI redacted):\nPatient: [PATIENT_NAME]\nMember ID: [MEMBER_ID]\nDOB: [DOB]\nDate of denial: 03/15/2026\n\nDear [PATIENT_NAME],\n\nYour claim for MRI of lumbar spine has been denied.\nDenial code: CO-50. The service is not deemed medically necessary.\nPer LCD L35936, this service does not meet coverage criteria.\nYou have 60 days to file an appeal.\n\n\nDenial Code: CO-50\nDenial Reason: The service is not deemed medically necessary\nTreatment Denied: Treatment details not specified in letter\n\nCMS Rule: Medicare covers services when medically necessary as defined in Section 1862(a)(1)(A) of the Social Security Act. Documentation must demonstrate the service is reasonable and necessary for diagnosis or treatment.\n\nCurrent appeal grounds:\n- Provide detailed clinical documentation supporting medical necessity\n- Include physician letter explaining why the service is required\n- Reference applicable Local Coverage Determination (LCD) or National Coverage Determination (NCD)\n- Submit supporting lab results, imaging, or specialist notes\n\nBased on the denial details above, suggest any additional appeal arguments, documentation to include, or procedural steps the patient should consider. Be specific and reference applicable regulations.",
+    "model_sent": "claude-opus-4-8",
+    "max_tokens_sent": 1024,
+    "analysis": {
+      "denial_reason_code": "CO-50",
+      "denial_reason": "The service is not deemed medically necessary",
+      "treatment_denied": "Treatment details not specified in letter",
+      "policy_section_cited": "LCD L35936",
+      "appeal_deadline": "60 days",
+      "denial_date": "03/15/2026"
+    },
+    "argument": {
+      "cms_rule": "Medicare covers services when medically necessary as defined in Section 1862(a)(1)(A) of the Social Security Act. Documentation must demonstrate the service is reasonable and necessary for diagnosis or treatment.",
+      "common_appeal_grounds": [
+        "Provide detailed clinical documentation supporting medical necessity",
+        "Include physician letter explaining why the service is required",
+        "Reference applicable Local Coverage Determination (LCD) or National Coverage Determination (NCD)",
+        "Submit supporting lab results, imaging, or specialist notes"
+      ],
+      "success_precedents": [
+        "CMS Manual Chapter 13 \u00a713.5.1 \u2014 Redetermination rights",
+        "42 CFR \u00a7405.940-405.958 \u2014 Medicare appeals process"
+      ]
+    }
+  }
+}

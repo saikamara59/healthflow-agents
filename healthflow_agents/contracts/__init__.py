@@ -1,6 +1,36 @@
 """Pydantic schemas the agents consume — the package's data contracts."""
-from healthflow_agents.contracts.schemas import PlanSummary
+from healthflow_agents.contracts.schemas import (
+    CostBreakdown,
+    CoverageArgument,
+    DenialAnalysis,
+    DocumentSection,
+    FormularyResult,
+    PlanCostResult,
+    PlanNetworkResult,
+    PlanSummary,
+    PrescriptionDetail,
+    PrescriptionInput,
+    ProcedureDetail,
+    ProcedureInput,
+    ProviderInput,
+    ProviderResult,
+    UsageInput,
+)
 
 __all__ = [
+    "CostBreakdown",
+    "CoverageArgument",
+    "DenialAnalysis",
+    "DocumentSection",
+    "FormularyResult",
+    "PlanCostResult",
+    "PlanNetworkResult",
     "PlanSummary",
+    "PrescriptionDetail",
+    "PrescriptionInput",
+    "ProcedureDetail",
+    "ProcedureInput",
+    "ProviderInput",
+    "ProviderResult",
+    "UsageInput",
 ]
