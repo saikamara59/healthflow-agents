@@ -1,21 +1,22 @@
 """Typed prompt inputs for the agent layer — the single PHI redaction boundary.
 
-Every agent's `_build_prompt` method accepts ONLY one of these dataclasses.
-There is no code path from a raw string to a prompt body that does not pass
-through a PromptInput constructor, and each constructor redacts its free-text
-fields via PHIRedactor at construction time. The dataclasses are frozen, so a
-redacted value cannot be replaced with a raw one afterward.
+Every agent's `_build_prompt` method accepts ONLY one of these models. There
+is no code path from a raw string to a prompt body that does not pass through
+a PromptInput constructor: free-text fields are redacted by a
+`mode="before"` validator during construction, and the models are frozen, so
+a redacted value cannot be replaced with a raw one afterward.
 
 Three of the five (Comparison, Cost, Network) have no free-text fields — they
 are typed wrappers that enforce the contract uniformly and make the layer
 ready for the day someone adds a free-text field.
 
-See docs/2026-05-14-phi-redaction-design.md for the threat
-model (no BAA assumed: redact patient identifiers, allow de-identified medical
-content like medication/procedure names and doctor names/NPIs).
+See docs/2026-05-14-phi-redaction-design.md for the threat model (no BAA
+assumed: redact patient identifiers, allow de-identified medical content like
+medication/procedure names and doctor names/NPIs).
 """
-from dataclasses import dataclass, field, InitVar
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from healthflow_agents.redaction.phi_redactor import PHIRedactor
 
@@ -41,84 +42,113 @@ def _summarize(log: list[dict]) -> dict:
     }
 
 
-@dataclass(frozen=True)
-class RedactedSection:
+class _FrozenPromptInput(BaseModel):
+    """Base for all PromptInputs: immutable after construction."""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class RedactedSection(_FrozenPromptInput):
     """A document section whose content has already been redacted.
 
     `title` is assumed safe (section headings, not patient data). `content`
-    is redacted by the TranslationPromptInput constructor before a
+    is redacted by the TranslationPromptInput validator before a
     RedactedSection is stored.
     """
+
     title: str
     content: str
 
 
-@dataclass(frozen=True)
-class TranslationPromptInput:
+class TranslationPromptInput(_FrozenPromptInput):
     """Input for TranslationAgent._build_prompt. Redacts question + section content."""
+
     sections: tuple[RedactedSection, ...]
     question: str
-    _redaction_log: list[dict] = field(
-        default_factory=list, init=False, compare=False, repr=False
-    )
+    # Populated by the validator; excluded from dumps so redaction metadata
+    # (positions) never rides along with serialized prompt inputs.
+    redaction_log: list[dict] = Field(default_factory=list, repr=False, exclude=True)
 
-    def __post_init__(self) -> None:
-        # Reassigning frozen-dataclass attributes requires object.__setattr__.
-        q_redacted, q_log = _redact_field(self.question)
-        object.__setattr__(self, "question", q_redacted)
-        # Mutating the list the attribute points at does NOT need the escape
-        # hatch — it is not a reassignment.
-        self._redaction_log.extend(q_log)
+    @model_validator(mode="before")
+    @classmethod
+    def _redact_free_text(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        log: list[dict] = []
 
-        redacted_sections = []
-        for section in self.sections:
-            c_redacted, c_log = _redact_field(section.content)
-            redacted_sections.append(RedactedSection(section.title, c_redacted))
-            self._redaction_log.extend(c_log)
-        object.__setattr__(self, "sections", tuple(redacted_sections))
+        question = data.get("question")
+        if isinstance(question, str):
+            q_redacted, q_log = _redact_field(question)
+            data["question"] = q_redacted
+            log.extend(q_log)
+
+        sections = data.get("sections")
+        if sections is not None:
+            redacted_sections = []
+            for section in sections:
+                title = section["title"] if isinstance(section, dict) else section.title
+                content = section["content"] if isinstance(section, dict) else section.content
+                c_redacted, c_log = _redact_field(content)
+                redacted_sections.append(RedactedSection(title=title, content=c_redacted))
+                log.extend(c_log)
+            data["sections"] = tuple(redacted_sections)
+
+        data["redaction_log"] = log
+        return data
 
     @property
     def redaction_summary(self) -> dict:
-        return _summarize(self._redaction_log)
+        return _summarize(self.redaction_log)
 
 
-@dataclass(frozen=True)
-class AppealPromptInput:
+class AppealPromptInput(_FrozenPromptInput):
     """Input for AppealAgent. The single redaction boundary for the appeal flow.
 
-    `denial_text` / `additional_context` are InitVar — constructor-only
-    parameters. The RAW text is passed to __post_init__, redacted, and then
-    discarded; only `redacted_denial` / `redacted_context` persist on the
-    instance. `process_appeal` consumes `redacted_denial` for BOTH the denial
-    parser and the Claude refine prompt — this dataclass is not prompt-only.
+    The constructor accepts ONLY raw `denial_text` / `additional_context`;
+    the validator redacts them and discards the raw values — only
+    `redacted_denial` / `redacted_context` persist on the instance. Passing
+    `redacted_*` directly is rejected so pre-"redacted" text can't bypass the
+    boundary. `process_appeal` consumes `redacted_denial` for BOTH the denial
+    parser and the Claude refine prompt — this model is not prompt-only.
     """
-    denial_text: InitVar[str]
-    additional_context: InitVar[str]
-    redacted_denial: str = field(init=False, default="")
-    redacted_context: str = field(init=False, default="")
-    _redaction_log: list[dict] = field(
-        default_factory=list, init=False, compare=False, repr=False
-    )
 
-    def __post_init__(self, denial_text: str, additional_context: str) -> None:
-        # InitVar params arrive here as arguments (in declaration order), not
-        # as self.* attributes — so the raw text never becomes a stored field.
-        denial_redacted, denial_log = _redact_field(denial_text)
-        object.__setattr__(self, "redacted_denial", denial_redacted)
-        self._redaction_log.extend(denial_log)
+    redacted_denial: str
+    redacted_context: str
+    redaction_log: list[dict] = Field(default_factory=list, repr=False, exclude=True)
 
-        context_redacted, context_log = _redact_field(additional_context)
-        object.__setattr__(self, "redacted_context", context_redacted)
-        self._redaction_log.extend(context_log)
+    @model_validator(mode="before")
+    @classmethod
+    def _redact_constructor_inputs(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        supplied = set(data) & {"redacted_denial", "redacted_context", "redaction_log"}
+        if supplied:
+            raise ValueError(
+                f"AppealPromptInput computes {sorted(supplied)} itself; "
+                "pass raw denial_text / additional_context only"
+            )
+        if "denial_text" not in data or "additional_context" not in data:
+            raise ValueError("denial_text and additional_context are required")
+
+        log: list[dict] = []
+        denial_redacted, denial_log = _redact_field(data["denial_text"])
+        log.extend(denial_log)
+        context_redacted, context_log = _redact_field(data["additional_context"])
+        log.extend(context_log)
+        return {
+            "redacted_denial": denial_redacted,
+            "redacted_context": context_redacted,
+            "redaction_log": log,
+        }
 
     @property
     def redaction_summary(self) -> dict:
-        return _summarize(self._redaction_log)
+        return _summarize(self.redaction_log)
 
 
-@dataclass(frozen=True)
-class ComparisonPromptInput:
+class ComparisonPromptInput(_FrozenPromptInput):
     """Input for ComparisonAgent._build_prompt. No free-text fields — typed wrapper."""
+
     plans: list[Any]            # list[PlanSummary] in production
     age: int
     income_level: str
@@ -130,9 +160,9 @@ class ComparisonPromptInput:
         return {"count": 0, "types": []}
 
 
-@dataclass(frozen=True)
-class CostPromptInput:
+class CostPromptInput(_FrozenPromptInput):
     """Input for CostCalculatorAgent._build_prompt. No free-text fields — typed wrapper."""
+
     results: list[Any]          # list[PlanCostResult] in production
     usage: Any                  # UsageInput in production
 
@@ -141,8 +171,7 @@ class CostPromptInput:
         return {"count": 0, "types": []}
 
 
-@dataclass(frozen=True)
-class NetworkPromptInput:
+class NetworkPromptInput(_FrozenPromptInput):
     """Input for NetworkAgent._build_prompt. No free-text fields — typed wrapper.
 
     Wraps `plan_results` (list[PlanNetworkResult]) — what _build_prompt actually
@@ -150,6 +179,7 @@ class NetworkPromptInput:
     identifiers (public NPPES registry data), not patient PHI, so they pass
     through by design.
     """
+
     plan_results: list[Any]     # list[PlanNetworkResult] in production
 
     @property

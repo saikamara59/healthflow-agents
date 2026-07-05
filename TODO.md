@@ -1,11 +1,12 @@
 # TODO
 
-- **Convert `redaction/prompt_inputs.py` from frozen dataclasses to Pydantic
-  models.** Deliberately NOT done during the port — the frozen-dataclass
-  PromptInput pattern (InitVar raw text, redaction in `__post_init__`,
-  `object.__setattr__` reassignment) moved verbatim so behavior deltas stay
-  attributable to the refactor only. A Pydantic conversion should preserve:
-  frozen/immutable instances, redaction at construction time, raw text never
-  stored, the `redaction_summary` property shape
-  (`{"count": int, "types": [str, ...]}`), and the static
-  `test_no_raw_prompt_path.py` guarantee.
+(no outstanding items)
+
+- ~~Convert `redaction/prompt_inputs.py` from frozen dataclasses to Pydantic
+  models.~~ Done in v0.2.0. Invariants preserved and now test-enforced
+  (tests/test_prompt_inputs.py "Pydantic model invariants" section):
+  frozen instances, redaction at construction via a `mode="before"`
+  validator, raw text never stored (absent from repr and dumps),
+  `redaction_summary` shape unchanged, and — new — AppealPromptInput
+  rejects direct `redacted_*` construction so pre-"redacted" text cannot
+  bypass the boundary.

@@ -1,6 +1,6 @@
 """Unit tests for the typed PromptInput layer.
 
-Each agent's prompt-builder accepts only a PromptInput dataclass whose
+Each agent's prompt-builder accepts only a PromptInput model whose
 constructor redacts free-text fields. These tests prove redaction is
 applied at construction and structured fields pass through unchanged.
 """
@@ -99,3 +99,55 @@ def test_network_prompt_input_passes_structured_fields_through():
     pi = NetworkPromptInput(plan_results=["net-result-a"])
     assert pi.plan_results == ["net-result-a"]
     assert pi.redaction_summary == {"count": 0, "types": []}
+
+
+# --- Pydantic model invariants (added with the dataclass -> Pydantic port) ---
+
+import pytest
+from pydantic import ValidationError
+
+
+def test_prompt_inputs_are_frozen():
+    """Redacted values cannot be replaced with raw ones after construction."""
+    pi = AppealPromptInput(denial_text="Patient: Ada Lovelace denied.", additional_context="")
+    with pytest.raises(ValidationError):
+        pi.redacted_denial = "Patient: Ada Lovelace denied."
+
+    tpi = TranslationPromptInput(sections=(), question="what is the copay?")
+    with pytest.raises(ValidationError):
+        tpi.question = "raw question"
+
+    section = RedactedSection(title="T", content="C")
+    with pytest.raises(ValidationError):
+        section.content = "raw"
+
+
+def test_appeal_prompt_input_rejects_redacted_field_bypass():
+    """The only constructor path is raw text in -> redacted fields out;
+    supplying redacted_* directly must be rejected, not silently trusted."""
+    with pytest.raises(ValidationError):
+        AppealPromptInput(
+            denial_text="x",
+            additional_context="",
+            redacted_denial="attacker-controlled 'pre-redacted' text",
+        )
+
+
+def test_appeal_prompt_input_never_stores_raw_text():
+    raw = "Patient: Emily Bronte was denied. DOB: 07/30/1818."
+    pi = AppealPromptInput(denial_text=raw, additional_context="")
+    assert "Emily Bronte" not in repr(pi)
+    assert "Emily Bronte" not in str(pi.model_dump())
+    assert "Emily Bronte" not in pi.model_dump_json()
+
+
+def test_redaction_summary_shape_unchanged():
+    """HealthFlow's audit consumers depend on this exact payload shape."""
+    pi = AppealPromptInput(
+        denial_text="Patient: Mark Twain denied. DOB: 11/30/1835.",
+        additional_context="",
+    )
+    summary = pi.redaction_summary
+    assert set(summary.keys()) == {"count", "types"}
+    assert isinstance(summary["count"], int)
+    assert summary["types"] == sorted(summary["types"])

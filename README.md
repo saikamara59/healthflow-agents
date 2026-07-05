@@ -38,7 +38,7 @@ agent = ComparisonAgent(
 This package assumes **no BAA with Anthropic**, so prompts sent to Claude
 must not carry HIPAA identifiers. Free-text fields (denial letters, document
 content, user questions) are redacted at construction time by `PHIRedactor`
-inside frozen `PromptInput` dataclasses — the only code path to a prompt
+inside frozen `PromptInput` Pydantic models — the only code path to a prompt
 body — replacing patient names, SSNs, DOBs, member IDs, phone numbers, and
 emails with typed placeholders. De-identified medical content (medication and
 procedure names, and provider names/NPIs, which are public NPPES registry
@@ -54,7 +54,7 @@ placeholder types only, never the raw or redacted text.
 ```
 healthflow_agents/
   core/        # AgentBase, client factory, logging Protocols, safety harness, model tiers
-  redaction/   # PHIRedactor + frozen PromptInput dataclasses (the LLM redaction boundary)
+  redaction/   # PHIRedactor + frozen PromptInput models (the LLM redaction boundary)
   contracts/   # Pydantic schemas the agents consume
   tools/       # deterministic tools the agents orchestrate
   agents/      # the five agents
