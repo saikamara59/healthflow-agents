@@ -15,8 +15,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+evals = [
+    "pyyaml>=6",
+    "python-dotenv>=1",
+]
 dev = [
     "pytest>=8",
+    "pyyaml>=6",
+    "python-dotenv>=1",
 ]
 
 [tool.setuptools.packages.find]
@@ -27,3 +33,6 @@ healthflow_agents = ["prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Repo root on sys.path so tests can import the top-level evals/ package
+# (which is not shipped in the wheel).
+pythonpath = ["."]

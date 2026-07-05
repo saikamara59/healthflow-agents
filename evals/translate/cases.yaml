@@ -1,0 +1,139 @@
+# Gold dataset for the translate accuracy benchmark.
+# Source plan: Humana Gold Plus H1036-217 (HMO), 2025 — see fixtures/provenance.md.
+# Every answer is verified against the fixture text. `answerable: false` cases
+# ask about benefits deliberately absent from the fixture (the agent must abstain).
+
+# ---- Answerable ----
+- id: monthly-premium
+  doc: humana-gold-plus-h1036-217
+  question: "What is the monthly plan premium?"
+  answerable: true
+  expect_facts:
+    amounts: [0]
+  gold_answer: "The monthly plan premium is $0. You still pay your Medicare Part B premium."
+
+- id: medical-deductible
+  doc: humana-gold-plus-h1036-217
+  question: "Does this plan have a medical deductible?"
+  answerable: true
+  gold_answer: "No. This plan does not have a medical deductible."
+
+- id: max-out-of-pocket
+  doc: humana-gold-plus-h1036-217
+  question: "What is the most I could pay out of pocket in a year for in-network care?"
+  answerable: true
+  expect_facts:
+    amounts: [4150]
+  gold_answer: "Your in-network maximum out-of-pocket is $4,150 per calendar year."
+
+- id: er-copay-admitted
+  doc: humana-gold-plus-h1036-217
+  question: "What's my ER copay, and is it waived if I'm admitted?"
+  answerable: true
+  expect_facts:
+    amounts: [140]
+  gold_answer: >
+    The emergency room copay is $140. If you are admitted to the same hospital
+    within 24 hours for the same condition, you do not pay your share of the
+    emergency-care cost.
+
+- id: pcp-copay
+  doc: humana-gold-plus-h1036-217
+  question: "What do I pay to see my primary care doctor?"
+  answerable: true
+  expect_facts:
+    amounts: [0]
+  gold_answer: "You pay a $0 copay to see your primary care provider (PCP)."
+
+- id: specialist-copay
+  doc: humana-gold-plus-h1036-217
+  question: "How much is a specialist visit?"
+  answerable: true
+  expect_facts:
+    amounts: [10]
+  gold_answer: "A specialist office visit is a $10 copay."
+
+- id: inpatient-per-day
+  doc: humana-gold-plus-h1036-217
+  question: "What do I pay per day for an inpatient hospital stay?"
+  answerable: true
+  expect_facts:
+    amounts: [175]
+  gold_answer: "You pay $175 per day for days 1 through 5, then $0 per day for days 6 through 90."
+
+- id: urgent-care-copay
+  doc: humana-gold-plus-h1036-217
+  question: "What's the copay at an urgent care center?"
+  answerable: true
+  expect_facts:
+    amounts: [5]
+  gold_answer: "Urgent care at an urgent care center is a $5 copay."
+
+- id: ground-ambulance
+  doc: humana-gold-plus-h1036-217
+  question: "How much is a ground ambulance ride?"
+  answerable: true
+  expect_facts:
+    amounts: [245]
+  gold_answer: "A ground ambulance is a $245 copay per date of service."
+
+- id: tier1-drug
+  doc: humana-gold-plus-h1036-217
+  question: "What's my copay for a Tier 1 preferred generic at a retail pharmacy (30-day)?"
+  answerable: true
+  expect_facts:
+    amounts: [0]
+  gold_answer: "A Tier 1 (Preferred Generic) drug is a $0 copay for a 30-day retail supply."
+
+- id: tier3-drug
+  doc: humana-gold-plus-h1036-217
+  question: "What is the copay for a Tier 3 preferred brand drug at retail?"
+  answerable: true
+  expect_facts:
+    amounts: [35]
+  gold_answer: "A Tier 3 (Preferred Brand) drug is a $35 copay for a 30-day retail supply."
+
+- id: insulin-cap
+  doc: humana-gold-plus-h1036-217
+  question: "How much will I pay for a one-month supply of insulin?"
+  answerable: true
+  expect_facts:
+    amounts: [35]
+  gold_answer: "You won't pay more than $35 for a one-month supply of a covered insulin, regardless of tier."
+
+- id: premium-hearing-aid
+  doc: humana-gold-plus-h1036-217
+  question: "What's the copay for a Premium Technology hearing aid?"
+  answerable: true
+  expect_facts:
+    amounts: [1299]
+  gold_answer: "A Premium Technology hearing aid is a $1,299 copay, up to 1 per ear per year."
+
+- id: deep-cleaning
+  doc: humana-gold-plus-h1036-217
+  question: "What do I pay for a deep cleaning (scaling and root planing)?"
+  answerable: true
+  expect_facts:
+    amounts: [0]
+  gold_answer: "A deep cleaning (scaling and root planing) is a $0 copay, up to 1 per quadrant every 3 years."
+
+# ---- Unanswerable (agent must abstain — these benefits are not in the fixture) ----
+- id: cosmetic-surgery
+  doc: humana-gold-plus-h1036-217
+  question: "Is cosmetic surgery covered?"
+  answerable: false
+
+- id: gym-membership
+  doc: humana-gold-plus-h1036-217
+  question: "Does the plan include a gym or fitness membership?"
+  answerable: false
+
+- id: otc-allowance
+  doc: humana-gold-plus-h1036-217
+  question: "Is there a monthly over-the-counter (OTC) allowance?"
+  answerable: false
+
+- id: foreign-travel
+  doc: humana-gold-plus-h1036-217
+  question: "Am I covered for emergencies while traveling outside the United States?"
+  answerable: false

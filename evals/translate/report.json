@@ -1,0 +1,188 @@
+{
+  "faithfulness_rate": 1.0,
+  "abstention_accuracy": 0.75,
+  "hallucination_rate": 0.0,
+  "pass_rate": 0.944,
+  "cases": [
+    {
+      "case_id": "monthly-premium",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "medical-deductible",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "max-out-of-pocket",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "er-copay-admitted",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "pcp-copay",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "specialist-copay",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "inpatient-per-day",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "urgent-care-copay",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "ground-ambulance",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "tier1-drug",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "tier3-drug",
+      "answerable": true,
+      "abstained": true,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "insulin-cap",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "premium-hearing-aid",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "deep-cleaning",
+      "answerable": true,
+      "abstained": false,
+      "amounts_present": true,
+      "faithful": true,
+      "hallucinated": false,
+      "contradicts_gold": false,
+      "passed": true
+    },
+    {
+      "case_id": "cosmetic-surgery",
+      "answerable": false,
+      "abstained": true,
+      "amounts_present": false,
+      "faithful": null,
+      "hallucinated": null,
+      "contradicts_gold": null,
+      "passed": true
+    },
+    {
+      "case_id": "gym-membership",
+      "answerable": false,
+      "abstained": true,
+      "amounts_present": false,
+      "faithful": null,
+      "hallucinated": null,
+      "contradicts_gold": null,
+      "passed": true
+    },
+    {
+      "case_id": "otc-allowance",
+      "answerable": false,
+      "abstained": false,
+      "amounts_present": false,
+      "faithful": null,
+      "hallucinated": null,
+      "contradicts_gold": null,
+      "passed": false
+    },
+    {
+      "case_id": "foreign-travel",
+      "answerable": false,
+      "abstained": true,
+      "amounts_present": false,
+      "faithful": null,
+      "hallucinated": null,
+      "contradicts_gold": null,
+      "passed": true
+    }
+  ]
+}
