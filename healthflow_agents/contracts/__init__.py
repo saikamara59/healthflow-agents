@@ -1,4 +1,11 @@
 """Pydantic schemas the agents consume — the package's data contracts."""
+from healthflow_agents.contracts.denial_record import (
+    AppealOutput,
+    BatchResult,
+    BatchSummary,
+    DenialRecord,
+    RecordOutcome,
+)
 from healthflow_agents.contracts.schemas import (
     CostBreakdown,
     CoverageArgument,
@@ -18,6 +25,11 @@ from healthflow_agents.contracts.schemas import (
 )
 
 __all__ = [
+    "AppealOutput",
+    "BatchResult",
+    "BatchSummary",
+    "DenialRecord",
+    "RecordOutcome",
     "CostBreakdown",
     "CoverageArgument",
     "DenialAnalysis",

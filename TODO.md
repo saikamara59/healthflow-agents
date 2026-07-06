@@ -1,6 +1,10 @@
 # TODO
 
-(no outstanding items)
+- **X12 835 (ERA) parsing** — `tools/x12_835.py` is a NotImplementedError
+  stub marking the production ingestion path for provider-side denials
+  (CLP loops, CAS/CARC adjustment segments, RARC remark codes, payer
+  companion-guide quirks). The simplified CSV/JSON format in
+  `tools/remittance_parser.py` stands in until it lands.
 
 - ~~Convert `redaction/prompt_inputs.py` from frozen dataclasses to Pydantic
   models.~~ Done in v0.2.0. Invariants preserved and now test-enforced
