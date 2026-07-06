@@ -203,8 +203,8 @@ def make_synthetic_denials(
             name, dob = rng.choice(_SYNTHETIC_PATIENTS)
             reason = f"Patient: {name}, DOB: {dob}. {reason}"
 
-        service_date = base_date - timedelta(days=rng.randint(30, 180))
-        denial_date = service_date + timedelta(days=rng.randint(14, 45))
+        service_date = base_date - timedelta(days=rng.randint(45, 120))
+        denial_date = service_date + timedelta(days=rng.randint(14, 40))
         deadline: date | None
         if rng.random() < 0.10:
             deadline = None

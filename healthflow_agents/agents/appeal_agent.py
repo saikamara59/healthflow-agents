@@ -222,7 +222,7 @@ class AppealAgent(AgentBase):
             analysis = DenialAnalysis(
                 denial_reason_code=record.carc_code,
                 denial_reason=prompt_input.redacted_reason,
-                treatment_denied="Not specified in remittance record",
+                treatment_denied="services on the denied claim",
                 policy_section_cited=None,
                 appeal_deadline=(
                     record.appeal_deadline.isoformat()

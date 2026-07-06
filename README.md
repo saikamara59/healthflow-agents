@@ -49,6 +49,31 @@ Redaction is audited: every redacting agent emits a `phi_redacted` audit
 event whose payload is `{"count": <n>, "types": ["[DOB]", ...]}` — counts and
 placeholder types only, never the raw or redacted text.
 
+## Provider-side (RCM) batch denial management
+
+The same AppealAgent also serves the provider side: ingest denied claims
+from a remittance (simplified CSV/JSON for now — X12 835 is a stubbed
+production path), run appeals in bulk with per-record error isolation, and
+rank the results into a worklist by appeal-deadline proximity and dollars
+at stake. Free text from remittances crosses the same PHI redaction
+boundary as patient-side denial letters.
+
+```python
+from healthflow_agents import AppealAgent
+from healthflow_agents.batch import BatchRunner, prioritize_worklist
+from healthflow_agents.tools.remittance_parser import load_remittance
+
+agent = AppealAgent(audit_sink=..., invocation_tracker=...)
+result = BatchRunner(agent).run(load_remittance("remit.csv"))
+worklist = prioritize_worklist(result, today=date.today())
+```
+
+See it end to end (offline, synthetic data, no API key needed):
+
+```
+python -m examples.provider_demo
+```
+
 ## Layout
 
 ```
