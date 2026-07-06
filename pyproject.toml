@@ -34,5 +34,6 @@ healthflow_agents = ["prompts/*.md"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Repo root on sys.path so tests can import the top-level evals/ package
-# (which is not shipped in the wheel).
-pythonpath = ["."]
+# (which is not shipped in the wheel); tests/ so subdirectory test modules
+# can import the shared tests/helpers.py.
+pythonpath = [".", "tests"]

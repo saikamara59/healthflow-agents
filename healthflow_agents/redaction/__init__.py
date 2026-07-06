@@ -5,6 +5,7 @@ from healthflow_agents.redaction.prompt_inputs import (
     ComparisonPromptInput,
     CostPromptInput,
     NetworkPromptInput,
+    ProviderDenialPromptInput,
     RedactedSection,
     TranslationPromptInput,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "ComparisonPromptInput",
     "CostPromptInput",
     "NetworkPromptInput",
+    "ProviderDenialPromptInput",
     "RedactedSection",
     "TranslationPromptInput",
 ]

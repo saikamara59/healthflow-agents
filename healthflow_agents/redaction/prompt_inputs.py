@@ -185,3 +185,40 @@ class NetworkPromptInput(_FrozenPromptInput):
     @property
     def redaction_summary(self) -> dict:
         return {"count": 0, "types": []}
+
+
+class ProviderDenialPromptInput(_FrozenPromptInput):
+    """Input for AppealAgent.process_denial_record — the redaction boundary
+    for provider-side (RCM) denial text.
+
+    Remittance free text can carry patient identifiers just like a mailed
+    denial letter, so it crosses the same boundary: the constructor accepts
+    ONLY raw `denial_reason_text`, redacts it, and discards the raw value.
+    Passing `redacted_reason` directly is rejected so pre-"redacted" text
+    can't bypass the redactor. Structured claim fields (CARC/RARC codes,
+    amounts, dates) are not free text and do not pass through here.
+    """
+
+    redacted_reason: str
+    redaction_log: list[dict] = Field(default_factory=list, repr=False, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _redact_constructor_inputs(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        supplied = set(data) & {"redacted_reason", "redaction_log"}
+        if supplied:
+            raise ValueError(
+                f"ProviderDenialPromptInput computes {sorted(supplied)} itself; "
+                "pass raw denial_reason_text only"
+            )
+        if "denial_reason_text" not in data:
+            raise ValueError("denial_reason_text is required")
+
+        redacted, log = _redact_field(data["denial_reason_text"])
+        return {"redacted_reason": redacted, "redaction_log": log}
+
+    @property
+    def redaction_summary(self) -> dict:
+        return _summarize(self.redaction_log)
