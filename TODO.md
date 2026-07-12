@@ -1,5 +1,12 @@
 # TODO
 
+- **Remaining PHI-redaction recall gaps** — street addresses, MRN-labeled
+  values, and dates without a DOB-style label pass through unredacted.
+  Documented as residual risk in `PHIRedactor`'s docstring and pinned as
+  strict-xfail cases in `tests/redaction/test_redaction_corpus.py`
+  (`GAP_CASES`) — fixing one flips its test. Bare 10-digit numbers are a
+  deliberate non-goal (NPIs share the shape and pass through by design).
+
 - **X12 835 (ERA) parsing** — `tools/x12_835.py` is a NotImplementedError
   stub marking the production ingestion path for provider-side denials
   (CLP loops, CAS/CARC adjustment segments, RARC remark codes, payer

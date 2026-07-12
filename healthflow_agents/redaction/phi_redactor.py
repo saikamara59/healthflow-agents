@@ -1,29 +1,57 @@
 import re
 
+# ALL-CAPS words that look like name words but are field labels; a name match
+# must stop before them so the label (and its value's own pattern) survives —
+# "MARGARET HALE DOB: 03/12/1948" redacts the name and leaves "DOB:" for the
+# DOB pattern.
+_LABEL_WORDS = (
+    "DOB|DATE|BIRTH|SSN|MRN|ID|MEMBER|PATIENT|POLICY|ACCOUNT|CLAIM|GROUP"
+    "|PLAN|PHONE|FAX|EMAIL|ADDRESS|ATTN|RE"
+)
+# One name word: capitalized first letter, then letters in either case, so
+# both "Margaret" and "MARGARET" match (remittance/EOB text is often ALL
+# CAPS). Prose stays safe because name patterns only fire after a
+# Patient:/Member:/Name:/Dear label.
+_NAME_WORD = rf"(?!(?i:{_LABEL_WORDS})\b)[A-Z][A-Za-z'-]+"
+# 2-6 name words, with an optional single-letter middle initial ("J." / "J")
+# between them.
+_NAME_SEQ = rf"{_NAME_WORD}(?:[^\S\n]+(?:[A-Z]\.?[^\S\n]+)?{_NAME_WORD}){{1,5}}"
+
 
 class PHIRedactor:
-    """Regex-based PHI redaction. Runs BEFORE any text reaches Claude or is logged."""
+    """Regex-based PHI redaction. Runs BEFORE any text reaches Claude or is logged.
+
+    Residual risk (deliberate non-goals, pinned by the guard tests in
+    tests/redaction/test_redaction_corpus.py): bare 10-digit numbers are not
+    treated as phone numbers because NPIs share the shape and pass through by
+    design; street addresses, MRN-labeled values, and dates without a
+    DOB-style label are not redacted.
+    """
 
     PATTERNS = [
-        # SSN must come before phone to avoid partial matches
+        # SSN must come before phone to avoid partial matches. Separators
+        # must be all-dashes, all-spaces, or absent — a mixed 5-4 grouping is
+        # a ZIP+4, not an SSN. Bare 9-digit runs redact as [SSN] even when
+        # they are really claim references: over-redaction is the safe
+        # direction.
         {
             "placeholder": "[SSN]",
             "pattern": "ssn",
-            "regex": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+            "regex": re.compile(r"\b(?:\d{3}-\d{2}-\d{4}|\d{3} \d{2} \d{4}|\d{9})\b"),
         },
-        # Names after Patient:, Member:, Name:, Dear
+        # Names after Patient:, Member:, Name:, Dear (labels case-insensitive)
         {
             "placeholder": "[PATIENT_NAME]",
             "pattern": "name_label",
             "regex": re.compile(
-                r"(?:Patient|Member|Name)\s*:[^\S\n]*([A-Z][a-z]+(?:[^\S\n]+[A-Z][a-z]+)+)",
+                rf"\b(?i:Patient|Member|Name)\s*:[^\S\n]*({_NAME_SEQ})",
             ),
         },
         {
             "placeholder": "[PATIENT_NAME]",
             "pattern": "dear_name",
             "regex": re.compile(
-                r"Dear[^\S\n]+([A-Z][a-z]+(?:[^\S\n]+[A-Z][a-z]+)+)",
+                rf"\b(?i:Dear)[^\S\n]+({_NAME_SEQ})",
             ),
         },
         # DOB patterns
@@ -44,11 +72,16 @@ class PHIRedactor:
                 re.IGNORECASE,
             ),
         },
-        # Phone numbers
+        # Phone numbers: (555) 123-4567, (555)123-4567, 555-123-4567,
+        # 555.123.4567, 555 123 4567. A separator is required after a bare
+        # area code (and bare 10-digit runs never match) so NPIs and other
+        # long references are left alone.
         {
             "placeholder": "[PHONE]",
             "pattern": "phone",
-            "regex": re.compile(r"\(?\d{3}\)?[\s-]\d{3}-\d{4}"),
+            "regex": re.compile(
+                r"(?<!\d)(?:\(\d{3}\)[\s.-]?|\d{3}[\s.-])\d{3}[\s.-]\d{4}\b"
+            ),
         },
         # Email addresses. Heuristic — matches the common shape; may over-match
         # strings like package coordinates or @mentions with a TLD-shaped
@@ -67,7 +100,11 @@ class PHIRedactor:
 
         Returns:
             (redacted_text, redaction_log) where redaction_log entries have
-            placeholder, pattern, and position keys.
+            placeholder, pattern, and position keys. `position` is the offset
+            in the text as it stood when that entry's pattern ran — earlier
+            patterns' replacements shift it relative to the original text —
+            so it is suitable for ordering entries, not for indexing into
+            either the input or the output.
         """
         redacted = text
         log: list[dict] = []
