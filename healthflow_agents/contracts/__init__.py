@@ -6,6 +6,13 @@ from healthflow_agents.contracts.denial_record import (
     DenialRecord,
     RecordOutcome,
 )
+from healthflow_agents.contracts.insights import (
+    BatchAggregates,
+    BatchTotals,
+    CarcAggregate,
+    DeadlineBuckets,
+    PayerAggregate,
+)
 from healthflow_agents.contracts.schemas import (
     CostBreakdown,
     CoverageArgument,
@@ -30,6 +37,11 @@ __all__ = [
     "BatchSummary",
     "DenialRecord",
     "RecordOutcome",
+    "BatchAggregates",
+    "BatchTotals",
+    "CarcAggregate",
+    "DeadlineBuckets",
+    "PayerAggregate",
     "CostBreakdown",
     "CoverageArgument",
     "DenialAnalysis",
