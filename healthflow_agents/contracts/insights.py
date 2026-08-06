@@ -5,19 +5,34 @@ batch (lifecycle counts, payer/CARC/deadline/dismissal dimensions) and feeds to
 BatchInsightsAgent. It is distinct from BatchSummary in denial_record.py, which
 is the package's own *execution* rollup — see CONTEXT.md.
 
-Every model here is frozen: aggregates are a value the host hands over, not a
-mutable buffer the agent edits. Validation is deliberately light — non-negative
-counts and dollars, a non-empty batch, and a coherent service-date range. There
-are no cross-dimension sum invariants: the host owns aggregation semantics, and
-per-dimension dollar rounding legitimately drifts by cents.
+Every model here is frozen, and the collection fields are immutable containers
+rather than list/dict: aggregates are a value the host hands over, not a mutable
+buffer. That matters beyond intent — a plain dict would let a caller write
+`dismissals_by_reason["other"] = -1` straight past the `ge=0` guardrail this
+contract exists to enforce, since pydantic re-validates on assignment only.
+Hosts still pass ordinary lists and dicts; validation converts them.
+
+Validation is otherwise deliberately light — non-negative counts and dollars, a
+non-empty batch, and a coherent service-date range. There are no cross-dimension
+sum invariants: the host owns aggregation semantics, and per-dimension dollar
+rounding legitimately drifts by cents.
 
 ADR 0001 governs the shape: no free-text field may ever be added here. Doing so
 re-opens the PHI-redaction question this contract exists to close.
 """
+from collections.abc import Mapping
 from datetime import date
+from types import MappingProxyType
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 Count = Annotated[int, Field(ge=0)]
 Amount = Annotated[float, Field(ge=0)]
@@ -97,12 +112,24 @@ class BatchAggregates(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     totals: BatchTotals
-    by_payer: list[PayerAggregate] = Field(default_factory=list)
-    by_carc: list[CarcAggregate] = Field(default_factory=list)
+    by_payer: tuple[PayerAggregate, ...]
+    by_carc: tuple[CarcAggregate, ...]
     deadlines: DeadlineBuckets
-    dismissals_by_reason: dict[str, Count] = Field(default_factory=dict)
-    service_date_start: date | None = None
-    service_date_end: date | None = None
+    dismissals_by_reason: Mapping[str, Count]
+    service_date_start: date | None
+    service_date_end: date | None
+
+    @field_validator("dismissals_by_reason", mode="after")
+    @classmethod
+    def _freeze_dismissals(cls, value: Mapping[str, int]) -> Mapping[str, int]:
+        """pydantic validates a Mapping into a plain dict; wrap it so the
+        counts can't be edited past their `ge=0` bound after construction."""
+        return MappingProxyType(dict(value))
+
+    @field_serializer("dismissals_by_reason")
+    def _serialize_dismissals(self, value: Mapping[str, int]) -> dict[str, int]:
+        """Hand the seam a plain dict — hosts round-trip this contract."""
+        return dict(value)
 
     @model_validator(mode="after")
     def _service_date_range_is_coherent(self) -> "BatchAggregates":
