@@ -1,4 +1,4 @@
-"""AgentBase — shared construction for the five HealthFlow agents.
+"""AgentBase — shared construction for the HealthFlow agents.
 
 Each agent subclass declares three class attributes:
 

@@ -2,14 +2,16 @@
 (see healthflow_agents/core/models.py). These tests lock the tier contract so
 a careless edit can't silently move an agent onto a more/less expensive model.
 
-- AppealAgent      -> Opus   (high-stakes regulatory/legal reasoning)
-- TranslationAgent -> Sonnet (nuanced extraction from policy text)
+- AppealAgent        -> Opus   (high-stakes regulatory/legal reasoning)
+- TranslationAgent   -> Sonnet (nuanced extraction from policy text)
+- BatchInsightsAgent -> Sonnet (inference over batch aggregates)
 - Comparison/Cost/Network -> Haiku (narrating tool-computed structured data)
 """
 from helpers import make_mock_client
 
 from healthflow_agents.agents import (
     AppealAgent,
+    BatchInsightsAgent,
     ComparisonAgent,
     CostCalculatorAgent,
     NetworkAgent,
@@ -33,6 +35,15 @@ def test_appeal_agent_uses_opus():
 
 def test_translation_agent_uses_sonnet():
     assert TranslationAgent.model == models.CLAUDE_MODEL_SONNET
+
+
+def test_batch_insights_agent_uses_sonnet():
+    """Sonnet, not Haiku, and deliberately so: insights *infer* root causes,
+    payer patterns, and prevention recommendations from aggregates. The Haiku
+    agents below only narrate figures a tool already computed — nothing in
+    their output is a judgement. Moving insights down a tier trades away the
+    reasoning the feature exists to provide."""
+    assert BatchInsightsAgent.model == models.CLAUDE_MODEL_SONNET
 
 
 def test_summarize_only_agents_use_haiku():

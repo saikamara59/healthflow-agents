@@ -38,7 +38,8 @@ agent = ComparisonAgent(
 
 Each agent is pinned to a Claude model tier matched to its task complexity
 (and cost): Opus for high-stakes regulatory reasoning (appeals), Sonnet for
-nuanced extraction from policy text (translation), Haiku for agents that
+nuanced extraction from policy text (translation) and inference over batch
+aggregates (insights), Haiku for agents that
 only narrate tool-computed structured data (comparison, cost, network). The
 tier contract is locked by tests.
 
@@ -85,6 +86,32 @@ See it end to end (offline, synthetic data, no API key needed):
 python -m examples.provider_demo
 ```
 
+## Batch insights
+
+`BatchInsightsAgent` turns a batch's **aggregates** — counts, dollars, and
+payer/CARC/deadline/dismissal rollups the host computes — into a short
+markdown narrative: what's driving denials, payer patterns, and what to fix
+upstream. The input contract (`BatchAggregates`) is frozen and carries no
+free text at all, so the insights prompt sits entirely outside the redaction
+boundary by construction rather than by recall
+([ADR 0001](docs/adr/0001-aggregates-only-insights-input.md)). CARC codes
+travel bare and are enriched with descriptions agent-side.
+
+```python
+from healthflow_agents import BatchInsightsAgent
+from healthflow_agents.contracts import BatchAggregates
+
+agent = BatchInsightsAgent(audit_sink=..., invocation_tracker=...)
+narrative = agent.generate_insights(BatchAggregates(...))
+```
+
+The narrative is exactly three sections, ~350 words, in a renderer-safe
+markdown subset (headings, bold, flat lists, paragraphs). Empty or truncated
+output raises `ValueError` — a degenerate narrative is never returned as a
+success. For dry runs and demos the package exports `DRY_RUN_NARRATIVE`, a
+format-true placeholder shipped in the same tag as the format itself, so the
+two cannot drift apart.
+
 ## Layout
 
 ```
@@ -93,7 +120,7 @@ healthflow_agents/
   redaction/   # PHIRedactor + frozen PromptInput models (the LLM redaction boundary)
   contracts/   # Pydantic schemas the agents consume (incl. DenialRecord/BatchResult)
   tools/       # deterministic tools the agents orchestrate
-  agents/      # the five agents
+  agents/      # the six agents
   batch/       # provider-side batch runner + worklist prioritization
   prompts/     # versioned system prompts (.md), loaded byte-identical at init
 evals/         # eval harnesses (translate accuracy benchmark; not shipped in the wheel)
