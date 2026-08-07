@@ -2,8 +2,8 @@
 
 Generates a synthetic remittance batch (50 denied claims), runs AppealAgent
 over every record with per-record error isolation, and prints the
-prioritized worklist an RCM team would work from, plus one fully generated
-appeal letter.
+prioritized worklist an RCM team would work from, one fully generated appeal
+letter, and the BatchInsightsAgent narrative over the batch's aggregates.
 
 Offline by default: the Claude refine step uses a clearly-labeled stub
 client, so the demo runs with no API key and produces deterministic output.
@@ -25,8 +25,23 @@ from collections import Counter
 from datetime import date
 
 from healthflow_agents.agents.appeal_agent import AppealAgent
+from healthflow_agents.agents.batch_insights_agent import (
+    DRY_RUN_NARRATIVE,
+    BatchInsightsAgent,
+)
 from healthflow_agents.batch import BatchRunner, days_until_deadline, prioritize_worklist
-from healthflow_agents.contracts.denial_record import BatchResult, RecordOutcome
+from healthflow_agents.contracts import (
+    BatchAggregates,
+    BatchTotals,
+    CarcAggregate,
+    DeadlineBuckets,
+    PayerAggregate,
+)
+from healthflow_agents.contracts.denial_record import (
+    BatchResult,
+    DenialRecord,
+    RecordOutcome,
+)
 from healthflow_agents.tools.denial_codes import DenialCodeDB
 from healthflow_agents.tools.remittance_parser import make_synthetic_denials
 
@@ -55,15 +70,18 @@ class _StubResponse:
 
 
 class _StubMessages:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
     def create(self, **kwargs: object) -> _StubResponse:
-        return _StubResponse(_STUB_RECOMMENDATION)
+        return _StubResponse(self._text)
 
 
 class OfflineStubClient:
     """Duck-typed stand-in for anthropic.Anthropic — no network, no key."""
 
-    def __init__(self) -> None:
-        self.messages = _StubMessages()
+    def __init__(self, text: str = _STUB_RECOMMENDATION) -> None:
+        self.messages = _StubMessages(text)
 
 
 class CountingAuditSink:
@@ -163,6 +181,99 @@ def print_sample_appeal(ranked: list[RecordOutcome]) -> None:
     print(sample.appeal.refined_recommendation)
 
 
+def build_aggregates(result: BatchResult, today: date) -> BatchAggregates:
+    """Roll a batch up into the aggregates-only insights input.
+
+    Hosts own this computation against their own persisted batch; the demo
+    does it over the run's records so the round trip is visible end to end.
+    Note what does NOT travel: no claim ids, no denial reason text, no patient
+    fields — the insights prompt sits outside the redaction boundary by
+    construction (ADR 0001).
+    """
+    records: list[DenialRecord] = [o.record for o in result.outcomes]
+    payer_claims: Counter[str] = Counter()
+    payer_billed: Counter[str] = Counter()
+    carc_billed: Counter[str] = Counter()
+    buckets: Counter[str] = Counter()
+
+    for r in records:
+        payer_claims[r.payer] += 1
+        payer_billed[r.payer] += r.billed_amount
+        carc_billed[r.carc_code] += r.billed_amount
+        days = days_until_deadline(r, today=today)
+        if days == float("inf"):
+            buckets["unknown"] += 1
+        elif days < 0:
+            buckets["overdue"] += 1
+        elif days <= 7:
+            buckets["due_within_7_days"] += 1
+        elif days <= 30:
+            buckets["due_7_to_30_days"] += 1
+        else:
+            buckets["due_beyond_30_days"] += 1
+
+    summary = result.summary
+    return BatchAggregates(
+        totals=BatchTotals(
+            records=summary.total_records,
+            billed_amount=summary.total_billed_amount,
+            drafted=summary.succeeded,
+            failed=summary.failed,
+            # This demo drafts appeals only; a host would carry its own
+            # submitted/dismissed lifecycle counts here.
+            submitted=0,
+            dismissed=0,
+        ),
+        by_payer=[
+            PayerAggregate(
+                payer=payer, records=claims, billed_amount=payer_billed[payer]
+            )
+            for payer, claims in payer_claims.most_common()
+        ],
+        by_carc=[
+            CarcAggregate(
+                carc_code=carc,
+                records=summary.records_by_carc[carc],
+                billed_amount=carc_billed[carc],
+            )
+            for carc, _ in carc_billed.most_common()
+        ],
+        deadlines=DeadlineBuckets(
+            overdue=buckets["overdue"],
+            due_within_7_days=buckets["due_within_7_days"],
+            due_7_to_30_days=buckets["due_7_to_30_days"],
+            due_beyond_30_days=buckets["due_beyond_30_days"],
+            unknown=buckets["unknown"],
+        ),
+        dismissals_by_reason={},
+        service_date_start=min(r.service_date for r in records) if records else None,
+        service_date_end=max(r.service_date for r in records) if records else None,
+    )
+
+
+def print_insights(
+    result: BatchResult, today: date, audit: "CountingAuditSink", live: bool
+) -> None:
+    aggregates = build_aggregates(result, today)
+    if live:
+        agent = BatchInsightsAgent(
+            audit_sink=audit, invocation_tracker=QuietInvocationTracker()
+        )
+    else:
+        # Offline: the stub answers with the package's exported dry-run
+        # narrative — the same constant a host's dry-run client serves.
+        agent = BatchInsightsAgent(
+            client=OfflineStubClient(DRY_RUN_NARRATIVE),  # type: ignore[arg-type]
+            audit_sink=audit,
+            invocation_tracker=QuietInvocationTracker(),
+        )
+
+    print(_rule("═"))
+    print("BATCH INSIGHTS — narrative over aggregates only (no free text sent)")
+    print(_rule())
+    print(agent.generate_insights(aggregates))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=50, help="number of synthetic denials")
@@ -198,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     print_summary(result, agent.code_db)
     print_worklist(ranked, today)
     print_sample_appeal(ranked)
+    print_insights(result, today, audit, live=args.live)
 
     print(_rule("═"))
     print("AUDIT EVENT TALLY (flowed through the injected AuditSink)")
