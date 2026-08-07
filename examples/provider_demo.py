@@ -193,13 +193,11 @@ def build_aggregates(result: BatchResult, today: date) -> BatchAggregates:
     records: list[DenialRecord] = [o.record for o in result.outcomes]
     payer_claims: Counter[str] = Counter()
     payer_billed: Counter[str] = Counter()
-    carc_billed: Counter[str] = Counter()
     buckets: Counter[str] = Counter()
 
     for r in records:
         payer_claims[r.payer] += 1
         payer_billed[r.payer] += r.billed_amount
-        carc_billed[r.carc_code] += r.billed_amount
         days = days_until_deadline(r, today=today)
         if days == float("inf"):
             buckets["unknown"] += 1
@@ -230,13 +228,17 @@ def build_aggregates(result: BatchResult, today: date) -> BatchAggregates:
             )
             for payer, claims in payer_claims.most_common()
         ],
+        # Counts and dollars both come off BatchSummary, so the CARC rows the
+        # agent sees agree to the cent with the summary printed above.
         by_carc=[
             CarcAggregate(
                 carc_code=carc,
                 records=summary.records_by_carc[carc],
-                billed_amount=carc_billed[carc],
+                billed_amount=billed,
             )
-            for carc, _ in carc_billed.most_common()
+            for carc, billed in sorted(
+                summary.billed_by_carc.items(), key=lambda kv: -kv[1]
+            )
         ],
         deadlines=DeadlineBuckets(
             overdue=buckets["overdue"],

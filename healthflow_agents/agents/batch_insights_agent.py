@@ -32,8 +32,8 @@ INSIGHTS_SECTION_HEADINGS = (
 
 #: Format-true placeholder narrative for dry runs and the public demo. The
 #: opening line labels it as a placeholder so a reader can never mistake it for
-#: an analysis of their own batch.
-DRY_RUN_NARRATIVE = """**Dry run — sample insights. No batch was analyzed and no figures below are real.**
+#: insights over their own batch.
+DRY_RUN_NARRATIVE = """**Dry run — sample insights. Nothing here was computed from a real batch; every figure below is invented.**
 
 ## What's driving denials
 
@@ -134,22 +134,20 @@ class BatchInsightsAgent(AgentBase):
             "",
         ]
         lines.extend(
-            [
-                f"- {payer.payer}: {payer.records} claims, "
+            _bullets(
+                f"{payer.payer}: {payer.records} claims, "
                 f"{_dollars(payer.billed_amount)} billed"
                 for payer in aggregates.by_payer
-            ]
-            or ["- None recorded"]
+            )
         )
 
         lines += ["", "## Denials by CARC code", ""]
         lines.extend(
-            [
-                f"- {self._describe_carc(carc.carc_code)}: {carc.records} claims, "
+            _bullets(
+                f"{self._describe_carc(carc.carc_code)}: {carc.records} claims, "
                 f"{_dollars(carc.billed_amount)} billed"
                 for carc in aggregates.by_carc
-            ]
-            or ["- None recorded"]
+            )
         )
 
         lines += [
@@ -166,13 +164,12 @@ class BatchInsightsAgent(AgentBase):
             "",
         ]
         lines.extend(
-            [
-                f"- {reason}: {count}"
+            _bullets(
+                f"{reason}: {count}"
                 # Sorted: dict order is the host's, and the prompt must not
                 # vary between two runs over equal aggregates.
                 for reason, count in sorted(aggregates.dismissals_by_reason.items())
-            ]
-            or ["- None recorded"]
+            )
         )
 
         return "\n".join(lines)
@@ -184,6 +181,12 @@ class BatchInsightsAgent(AgentBase):
         if entry is None:
             return carc_code
         return f"{carc_code} ({entry['description']})"
+
+
+def _bullets(items) -> list[str]:
+    """Bullet lines for one dimension — an explicit "none" beats an empty
+    section, which reads to the model as a section it may invent content for."""
+    return [f"- {item}" for item in items] or ["- None recorded"]
 
 
 def _dollars(amount: float) -> str:

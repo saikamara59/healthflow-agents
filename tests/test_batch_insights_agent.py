@@ -310,7 +310,9 @@ def test_dry_run_narrative_uses_only_renderer_safe_markdown():
 
 
 def test_dry_run_narrative_respects_the_word_cap():
-    assert len(DRY_RUN_NARRATIVE.split()) <= 400
+    """The placeholder demonstrates the format, so it has to obey the same
+    ~350-word cap the prompt imposes on a real narrative."""
+    assert len(DRY_RUN_NARRATIVE.split()) <= 350
 
 
 def test_dry_run_narrative_is_flat_re_exported():
@@ -331,3 +333,15 @@ def test_system_prompt_mandates_the_three_sections_and_the_word_cap():
     for heading in INSIGHTS_SECTION_HEADINGS:
         assert heading in agent.system_prompt
     assert "350" in agent.system_prompt
+
+
+def test_system_prompt_restricts_output_to_the_renderer_safe_subset():
+    """The markdown restriction is the only thing standing between the model
+    and a panel that silently degrades — it must stay stated in the prompt."""
+    agent, _ = make_agent()
+    prompt = agent.system_prompt.lower()
+
+    for allowed in ("heading", "bold", "list", "paragraph"):
+        assert allowed in prompt
+    for banned in ("table", "link", "italic", "code", "html"):
+        assert banned in prompt
